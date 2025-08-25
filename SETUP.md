@@ -45,7 +45,7 @@ wget https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf -O
 
 ## 4. Rename & Verify Data File (Critical)
 
-**Rename the downloaded file to a simple name like `region.osm.pbf`:**
+**Rename the downloaded file to a simple name like `region.osm.pbf`:** i found without doing this i ran into multle issues.
 ```bash
 mv ~/osm-docker/australia-latest.osm.pbf ~/osm-docker/region.osm.pbf
 ```
