@@ -45,7 +45,7 @@ wget https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf -O
 
 ## 4. Rename & Verify Data File (Critical)
 
-**Rename the downloaded file to a simple name like `region.osm.pbf`:** i found without doing this i ran into multle issues.
+**Rename the downloaded file to a simple name like `region.osm.pbf`:** i found without doing this i ran into issues.
 ```bash
 mv ~/osm-docker/australia-latest.osm.pbf ~/osm-docker/region.osm.pbf
 ```
@@ -97,10 +97,10 @@ sudo docker run -p 8080:80 \
 > If you get a “port is already allocated” error, check with `sudo lsof -i :8080`.
 
 **Demo page:**  
-👉 http://<your-server-ip>:8080
+http://<your-server-ip>:8080
 
 **Example tile:**  
-👉 http://<your-server-ip>:8080/tile/0/0/0.png
+http://<your-server-ip>:8080/tile/0/0/0.png
 
 ---
 
