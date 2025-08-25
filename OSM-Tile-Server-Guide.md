@@ -1,120 +1,107 @@
 # OpenStreetMap Tile Server Deployment Guide
 
-This document provides a clear, step-by-step procedure for deploying an OpenStreetMap (OSM) tile server using Docker on a fresh Ubuntu VM. Follow each section in order for a successful setup and reliable operation.
+This guide outlines a refined process for deploying an OpenStreetMap (OSM) tile server on a clean Ubuntu system using Docker. Follow each section carefully for a reliable and maintainable installation.
 
 ---
 
-## 1. VM Preparation
+## 1. Prepare Your VM
 
-- Start with a **fresh Ubuntu VM** (recommended: Ubuntu 22.04 or later).
-- Update all packages:
+- **Recommended:** Ubuntu 20.04 or newer, freshly installed.
+- **Update and install dependencies:**
   ```bash
   sudo apt update && sudo apt upgrade -y
+  sudo apt install -y docker.io docker-compose git wget unzip
   ```
-- Install required software:
-  ```bash
-  sudo apt install -y docker.io docker-compose postgresql postgis git wget unzip
-  ```
-- Add your user to the Docker group (replace `$USER` as needed):
+- **Add your user to the Docker group:**
   ```bash
   sudo usermod -aG docker $USER
+  newgrp docker
   ```
-- **Log out and log back in** to apply Docker group changes.
+  > Log out and back in if you see permission errors using Docker.
 
 ---
 
 ## 2. Directory Structure
 
-- Create directories for OSM data and backups:
+- **Create main directories:**
   ```bash
   mkdir -p ~/osm-docker/osm-data
-  mkdir -p ~/osm-docker/osm-backup
+  cd ~/osm-docker
+  ```
+- **Recommended folder layout:**
+  ```
+  osm-docker/
+   ├─ osm-data/           # Stores PBF, style, DB, tiles
+   └─ docker-compose.yml  # (Optional, for orchestration)
   ```
 
 ---
 
-## 3. Obtain OSM Data
+## 3. Download Regional OSM Extract
 
-- Navigate to the data directory:
+- **Download the latest Australia extract:**
   ```bash
   cd ~/osm-docker/osm-data
+  wget https://download.geofabrik.de/australia-oceania-latest.osm.pbf
   ```
-- Download the Australia OSM extract:
+- **Rename the file (prevents import errors):**
   ```bash
-  wget https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf
+  mv australia-oceania-latest.osm.pbf australia-latest.osm.pbf
   ```
-- **Verify the filename:**  
-  It should be `australia-latest.osm.pbf` (no extra dots or spaces).
+  > Ensure the filename is simple, without extra dots or spaces.
 
 ---
 
-## 4. Acquire Docker Image
+## 4. Prepare Carto Style
 
-- Pull the latest OpenStreetMap tile server image:
+- **Clone the Carto style repository:**
   ```bash
-  docker pull overv/openstreetmap-tile-server:latest
+  cd ~/osm-docker/osm-data
+  git clone https://github.com/gravitystorm/openstreetmap-carto.git style
   ```
+- **Compile the style XML (requires `carto`):**
+  ```bash
+  cd style
+  carto project.mml > mapnik.xml
+  ```
+  > If you do not have `carto` installed locally, use a Docker image that includes it or refer to the Carto documentation.
 
 ---
 
 ## 5. Import OSM Data
 
-- Ensure you are in the correct directory:
+- **Mount the data directory and run the import:**
   ```bash
   cd ~/osm-docker/osm-data
+  sudo docker run -v $(pwd):/data \
+    overv/openstreetmap-tile-server:latest \
+    import
   ```
-- Run the import:
-  ```bash
-  sudo docker run -v $(pwd):/data overv/openstreetmap-tile-server:latest import
-  ```
-- **Notes:**
-  - The Docker image will handle style folder setup automatically.
-  - Confirm `/osm-data` is writable.
-
-- **If import fails or is incomplete:**
-  ```bash
-  rm -rf /data/database/*
-  rm -rf /data/tiles/*
-  ```
-  Then rerun the import command.
+- **Troubleshooting import issues:**
+  - `ls: cannot access '/data/style/': No such file or directory`  
+    → Ensure style files exist at `/data/style/`.
+  - `mv: target '/data/style/' is not a directory`  
+    → Confirm `/data/style` exists and is a directory.
+  - **IO interruptions:**  
+    Delete `/data/database/PG_VERSION` and `/nodes/flat_nodes.bin` to rerun import.
+  - **Partial imports:**  
+    Delete `/data/tiles/planet-import-complete` if stuck or incomplete.
 
 ---
 
-## 6. Verify Import Completion
+## 6. Postgres Configuration (Advanced/Optional)
 
-- Check for the import completion file:
+- The Docker container handles the database by default.
+- **To customize Postgres (for large imports):**
   ```bash
-  ls ~/osm-docker/osm-data/tiles/planet-import-complete
+  sudo nano /etc/postgresql/15/main/postgresql.conf
   ```
-- Inspect database tables:
-  ```bash
-  sudo docker run -it -v $(pwd):/data --rm overv/openstreetmap-tile-server:latest psql -U renderer -d gis -c "\dt"
-  ```
-
----
-
-## 7. Run the Tile Server
-
-- Launch the tile server:
-  ```bash
-  sudo docker run -v ~/osm-docker/osm-data:/data -p 8080:80 overv/openstreetmap-tile-server:latest run
-  ```
-- **Verify operation:**
-  - Access: `http://<your_vm_ip>:8080/tile/0/0/0.png`
-  - You may use a local web client pointing to the above tiles URL.
-
----
-
-## 8. Performance Tuning
-
-- **Recommended VM specifications:**  
-  Minimum 8–16 GB RAM and multiple CPU cores.
-- **Optional Postgres tuning** (performed inside the container for advanced deployments):
+  Adjust these parameters as needed:
   ```
   max_connections = 250
   temp_buffers = 32MB
   work_mem = 128MB
-  wal_buffers = 1024kB
+  wal_buffers = 1MB
   wal_writer_delay = 500ms
   commit_delay = 10000
   max_wal_size = 2880MB
@@ -122,74 +109,102 @@ This document provides a clear, step-by-step procedure for deploying an OpenStre
   autovacuum_vacuum_scale_factor = 0.05
   autovacuum_analyze_scale_factor = 0.02
   listen_addresses = '*'
-  autovacuum = on
   ```
-- For `renderd`, set `num_threads=4` or equal to the number of CPU cores.
+- **Ensure renderer role exists:**
+  ```bash
+  sudo -u postgres createuser renderer
+  sudo -u postgres createdb -O renderer gis
+  ```
+  > If the role already exists, skip this step.
 
 ---
 
-## 9. Network Access
+## 7. Run the Tile Server
+
+- **Start the tile server:**
+  ```bash
+  sudo docker run -v ~/osm-docker/osm-data:/data \
+    -p 8080:80 \
+    overv/openstreetmap-tile-server:latest \
+    run
+  ```
+- **Common runtime issues:**
+  - **Port is already allocated:**  
+    Another container may be using port 8080. Check with:
+    ```bash
+    sudo lsof -i :8080
+    ```
+  - **Blank static maps:**  
+    - Verify `/data/database/planet-import-complete` exists.
+    - Confirm database connection (see container logs).
+    - Ensure VM IP matches your tile URL.
+
+---
+
+## 8. Verify Tile Rendering
+
+- **Test with a static tile URL:**
+  ```
+  http://<YOUR_VM_IP>:8080/tile/0/0/0.png
+  ```
+- **Interactive map:**  
+  Open a local HTML template (e.g., `map.html`) in your browser and configure it to use your tile server endpoint.
+
+---
+
+## 9. (Optional) Auto-Update & Planet Import
+
+- **For automatic updates:**
+  ```bash
+  docker exec -it <container_name> bash
+  osmosis --read-replication-interval ...
+  ```
+- **Manual completion signal:**
+  ```bash
+  touch /data/database/planet-import-complete
+  ```
+
+---
+
+## 10. Operational Notes & Best Practices
+
+- **File naming for extracts is critical:**  
+  Extra dots or non-standard names may break Docker import.
+- **I/O errors during import:**  
+  May leave the database in a partial state. Remove `/data/database/PG_VERSION` to restart.
+- **Tile rendering:**  
+  Requires Postgres running inside the container.
+- **Zoom detail:**  
+  Depends on VM hardware and Docker resource allocation.
+- **Access outside the LAN:**  
+  Requires a reverse proxy or port forwarding.
+
+---
+
+## 11. Accessing Your Map
 
 - **Local network access:**  
-  Use `http://<your_vm_ip>:8080/tile/...`
-- **External access:**  
-  For production deployments, it is recommended to place the tile server behind a reverse proxy (such as NGINX or Caddy) or use a VPN.  
-  **Never expose the Postgres database directly to the internet.**
+  ```
+  http://<YOUR_VM_IP>:8080/tile/{z}/{x}/{y}.png
+  ```
+- **Web access:**  
+  This requires a reverse proxy (e.g., NGINX or Caddy) or NAT port forwarding.  
+  *Do not expose the Postgres database directly to the internet.*
 
 ---
 
-## 10. Updating Map Data
+## 12. Reverse Proxy Considerations (Optional)
 
-- When a new `.osm.pbf` extract is released:
-  1. Stop the running tile server container.
-  2. Replace the `.osm.pbf` file with the new version.
-  3. Clear the database and tile cache:
-      ```bash
-      rm -rf ~/osm-docker/osm-data/database/*
-      rm -rf ~/osm-docker/osm-data/tiles/*
-      ```
-  4. Re-import the data (see step 5).
-  5. Restart the tile server (see step 7).
+For secure and scalable public access, it is recommended to use a reverse proxy such as **NGINX** or **Caddy**.  
+A reverse proxy can:
 
----
+- Terminate HTTPS and handle certificates.
+- Provide access control and logging.
+- Forward requests from standard ports (80/443) to your tile server (8080).
+- Protect the backend database and services.
 
-## 11. Logs & Monitoring
-
-- Tile rendering logs are available via the container’s `stdout`.
-- Track import progress with `/data/tiles/planet-import-complete`.
-- `renderd` errors typically indicate missing tiles or database connection issues.
+Refer to official [NGINX documentation](https://nginx.org/en/docs/) or [Caddy documentation](https://caddyserver.com/docs/) for proxy configuration examples.
 
 ---
 
-## 12. Backup & Recovery
-
-- **Database backup:**  
-  Periodically back up `~/osm-docker/osm-data/database`
-- **Tile cache backup:**  
-  Back up `~/osm-docker/osm-data/tiles` for faster recovery.
-
----
-
-## 13. Troubleshooting
-
-| Issue                         | Cause                                | Solution                                        |
-|-------------------------------|--------------------------------------|-------------------------------------------------|
-| Blank map                     | Tiles not rendered yet               | Wait or check renderd logs                      |
-| PostGIS socket failed         | DB not running / import incomplete   | Re-run import                                   |
-| planet-import-complete missing| Partial import                       | Clear DB/tiles and re-import                    |
-| Slow zoom                     | Large PBF / insufficient RAM         | Increase VM resources or use smaller extract    |
-| Docker port bind fails        | Port 8080 already in use             | Stop conflicting container and rerun            |
-
----
-
-## 14. Reverse Proxy (Optional)
-
-For public deployments, consider using a reverse proxy to improve security, performance, and flexibility.  
-Popular choices include **NGINX** and **Caddy**.  
-A reverse proxy can handle HTTPS, rate limiting, and access control, while forwarding requests to your tile server running on port 8080.
-
-*Configuration of a reverse proxy is outside the scope of this guide, but official documentation for NGINX and Caddy provides clear instructions for proxying HTTP services.*
-
----
-
-**End of guide**
+**End of Guide**
