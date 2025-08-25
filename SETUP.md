@@ -3,6 +3,8 @@
 A streamlined guide for deploying an OpenStreetMap tile server using Docker on Ubuntu.  
 Follow each step and review the notes for common pitfalls.
 
+The below guide i was able to set up OSM inside of a VM for testing purposes.
+
 ---
 
 ## 1. System Preparation
