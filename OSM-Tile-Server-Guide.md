@@ -1,12 +1,13 @@
 # OpenStreetMap Tile Server Deployment Guide
 
-This guide outlines a refined process for deploying an OpenStreetMap (OSM) tile server on a clean Ubuntu system using Docker. Follow each section carefully for a reliable and maintainable installation.
+This guide provides a refined, step-by-step process for deploying an OpenStreetMap (OSM) tile server on Ubuntu using Docker.  
+References to all major tools, data sources, and styles are included to ensure transparency and ease of support.
 
 ---
 
 ## 1. Prepare Your VM
 
-- **Recommended:** Ubuntu 20.04 or newer, freshly installed.
+- **Recommended OS:** Ubuntu 20.04 or newer, freshly installed.
 - **Update and install dependencies:**
   ```bash
   sudo apt update && sudo apt upgrade -y
@@ -39,6 +40,8 @@ This guide outlines a refined process for deploying an OpenStreetMap (OSM) tile 
 
 ## 3. Download Regional OSM Extract
 
+- **OSM Data Source:**  
+  [Geofabrik](https://download.geofabrik.de/) distributes regional extracts from [OpenStreetMap](https://www.openstreetmap.org/).
 - **Download the latest Australia extract:**
   ```bash
   cd ~/osm-docker/osm-data
@@ -54,22 +57,26 @@ This guide outlines a refined process for deploying an OpenStreetMap (OSM) tile 
 
 ## 4. Prepare Carto Style
 
+- **Carto Style Source:**  
+  [OpenStreetMap Carto](https://github.com/gravitystorm/openstreetmap-carto) is the default style for OSM tiles.
 - **Clone the Carto style repository:**
   ```bash
   cd ~/osm-docker/osm-data
   git clone https://github.com/gravitystorm/openstreetmap-carto.git style
   ```
-- **Compile the style XML (requires `carto`):**
+- **Compile the style XML (requires [`carto`](https://github.com/mapbox/carto)):**
   ```bash
   cd style
   carto project.mml > mapnik.xml
   ```
-  > If you do not have `carto` installed locally, use a Docker image that includes it or refer to the Carto documentation.
+  > If you do not have `carto` installed locally, you can use a Docker image that includes it or refer to the Carto documentation.
 
 ---
 
 ## 5. Import OSM Data
 
+- **Docker Image Source:**  
+  [overv/openstreetmap-tile-server](https://github.com/Overv/openstreetmap-tile-server) provides an all-in-one OSM tile server image.
 - **Mount the data directory and run the import:**
   ```bash
   cd ~/osm-docker/osm-data
@@ -91,6 +98,8 @@ This guide outlines a refined process for deploying an OpenStreetMap (OSM) tile 
 
 ## 6. Postgres Configuration (Advanced/Optional)
 
+- **PostgreSQL and PostGIS:**  
+  [PostgreSQL](https://www.postgresql.org/) is the database engine; [PostGIS](https://postgis.net/) is the spatial extension.
 - The Docker container handles the database by default.
 - **To customize Postgres (for large imports):**
   ```bash
@@ -154,7 +163,8 @@ This guide outlines a refined process for deploying an OpenStreetMap (OSM) tile 
 
 ## 9. (Optional) Auto-Update & Planet Import
 
-- **For automatic updates:**
+- **Change replication and planet import:**  
+  [Osmosis](https://wiki.openstreetmap.org/wiki/Osmosis) can be used for updates and diffs.
   ```bash
   docker exec -it <container_name> bash
   osmosis --read-replication-interval ...
@@ -195,7 +205,7 @@ This guide outlines a refined process for deploying an OpenStreetMap (OSM) tile 
 
 ## 12. Reverse Proxy Considerations (Optional)
 
-For secure and scalable public access, it is recommended to use a reverse proxy such as **NGINX** or **Caddy**.  
+For secure and scalable public access, it is recommended to use a reverse proxy such as **NGINX** ([documentation](https://nginx.org/en/docs/)) or **Caddy** ([documentation](https://caddyserver.com/docs/)).  
 A reverse proxy can:
 
 - Terminate HTTPS and handle certificates.
@@ -203,7 +213,40 @@ A reverse proxy can:
 - Forward requests from standard ports (80/443) to your tile server (8080).
 - Protect the backend database and services.
 
-Refer to official [NGINX documentation](https://nginx.org/en/docs/) or [Caddy documentation](https://caddyserver.com/docs/) for proxy configuration examples.
+---
+
+## 13. References & Resources
+
+- **OpenStreetMap**:  
+  [openstreetmap.org](https://www.openstreetmap.org/)  
+  Collaborative mapping project (data source).
+- **Geofabrik OSM Extracts**:  
+  [download.geofabrik.de](https://download.geofabrik.de/)  
+  Regional OSM data downloads.
+- **OpenStreetMap Carto Style**:  
+  [github.com/gravitystorm/openstreetmap-carto](https://github.com/gravitystorm/openstreetmap-carto)  
+  Default map style for OSM tiles.
+- **overv/openstreetmap-tile-server**:  
+  [github.com/Overv/openstreetmap-tile-server](https://github.com/Overv/openstreetmap-tile-server)  
+  Docker-based OSM tile server project.
+- **Docker**:  
+  [docker.com](https://www.docker.com/)  
+  Containerization platform.
+- **PostgreSQL**:  
+  [postgresql.org](https://www.postgresql.org/)  
+  Database engine.
+- **PostGIS**:  
+  [postgis.net](https://postgis.net/)  
+  Spatial extension for PostgreSQL.
+- **Osmosis**:  
+  [wiki.openstreetmap.org/wiki/Osmosis](https://wiki.openstreetmap.org/wiki/Osmosis)  
+  OSM data processing tool.
+- **NGINX**:  
+  [nginx.org/en/docs/](https://nginx.org/en/docs/)  
+  Reverse proxy and web server.
+- **Caddy**:  
+  [caddyserver.com/docs/](https://caddyserver.com/docs/)  
+  Modern, automatic HTTPS reverse proxy.
 
 ---
 
