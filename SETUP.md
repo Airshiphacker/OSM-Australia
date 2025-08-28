@@ -48,7 +48,7 @@ wget https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf -O
 
 ## 4. Data File Naming (Critical)
 
-**FIXED:** The Docker image requires the data file to be named exactly `region.osm.pbf` **without extra dots, spaces, or typos**.
+The Docker image requires the data file to be named exactly `region.osm.pbf` **without extra dots, spaces, or typos**.
 
 If the filename is incorrect or misplaced, the import will default to Luxembourg instead of your intended region.
 
