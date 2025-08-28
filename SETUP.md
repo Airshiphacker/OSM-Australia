@@ -1,6 +1,6 @@
 # OpenStreetMap Tile Server (Docker, Ubuntu)
 
-This guide provides a walkthrough for deploying an OpenStreetMap (OSM) tile server using Docker on Ubuntu. It has been updated to ensure full dataset imports and proper style handling, validated on a Linux VM using Australia OSM data.
+This guide provides a walkthrough for deploying an OpenStreetMap (OSM) tile server using Docker on Ubuntu. It has been updated to ensure full dataset imports, proper style handling, and optional automatic updates, validated on a Linux VM using Australia OSM data.
 
 ---
 
@@ -75,22 +75,25 @@ This ensures Docker picks up the correct `.osm.pbf` file for import.
 
 ---
 
-## 5. Import OSM Data (One-Time)
+## 5. Import OSM Data (One-Time) with Updates Enabled
 
 **NOTE:** Ensure the filename and directory structure above are correct before running the import.
 
-**Updated Import Command:**
+**Updated Import Command (Automatic Updates Enabled):**
 
 ```bash
-sudo docker run -v ~/osm-docker/osm-data:/data \
-  overv/openstreetmap-tile-server:latest import
+docker run \
+    -e UPDATES=enabled \
+    -v ~/osm-docker/region.osm.pbf:/data/region.osm.pbf \
+    -v ~/osm-docker/osm-data:/data/database/ \
+    overv/openstreetmap-tile-server:latest import
 ```
 
+* The `-e UPDATES=enabled` option configures the database to accept incremental OSM diffs.
 * Only mount the `osm-data` folder, not the `.osm.pbf` file separately.
 * On successful completion, you’ll see:
-  `~/osm-docker/osm-data/database/planet-import-complete`
-
-If the import fails (e.g., crash, I/O error, VM shutdown), reset the database and retry:
+  `~/osm-docker/osm-data/planet-import-complete`
+* If the import fails (e.g., crash, I/O error, VM shutdown), reset the database and retry:
 
 ```bash
 sudo rm -rf ~/osm-docker/osm-data/database/*
@@ -103,7 +106,7 @@ sudo rm -rf ~/osm-docker/osm-data/database/*
 Start the tile server:
 
 ```bash
-sudo docker run -p 8080:80 -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest run
+docker run -p 8080:80 -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest run
 ```
 
 * Demo page: `http://<your-server-ip>:8080`
@@ -111,22 +114,22 @@ sudo docker run -p 8080:80 -v ~/osm-docker/osm-data:/data overv/openstreetmap-ti
 
 ---
 
-## 7. Keeping the Map Updated
+## 7. Keeping the Map Updated | if you enable UPDATES=enabled during the import, the container will automatically fetch and apply OSM diffs each time it runs, so manual updates (step 7.1) are optional.
 
-### 7.1. Manual Updates (Recommended)
+### 7.1. Manual Updates (Optional)
+
+After the initial import with `UPDATES=enabled`, you can manually fetch and apply OSM diffs:
 
 ```bash
-sudo docker run -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest update
+docker run -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest run /app/update.sh
 ```
-
-This command downloads OSM diffs and applies them to your database efficiently.
 
 ### 7.2. Automatic Updates (Optional)
 
 Schedule a cron job to update periodically:
 
 ```bash
-0 * * * * docker run -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest update
+0 * * * * docker run -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest run /app/update.sh
 ```
 
 ### 7.3. Manual Full Import
