@@ -1,6 +1,6 @@
 # OpenStreetMap Tile Server (Docker, Ubuntu)
 
-This guide provides a concise, technically-focused walkthrough for deploying an OpenStreetMap (OSM) tile server using Docker on Ubuntu. It was successfully validated inside a Linux VM and incorporates practical lessons learned during setup.
+This guide provides a walkthrough for deploying an OpenStreetMap (OSM) tile server using Docker on Ubuntu. It was successfully validated inside a Linux VM and incorporates practical lessons learned during setup using Australia OSM data.
 
 ---
 
@@ -42,24 +42,29 @@ Acquire the relevant OSM extract for your region. For example, to download Austr
 wget https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf -O ~/osm-docker/australia-latest.osm.pbf
 ```
 
-- Replace the URL with the [Geofabrik](https://download.geofabrik.de/) extract for your region.
+* Replace the URL with the [Geofabrik](https://download.geofabrik.de/) extract for your region.
 
 ---
 
 ## 4. Data File Naming (Critical)
 
-Rename the downloaded file to avoid Docker import issues (the image expects `/data.osm.pbf`):
+**FIXED:** The Docker image **requires** the data file to be named exactly `region.osm.pbf`.
+If this step is skipped or the filename is wrong, the import will default to **Luxembourg** instead of your intended region.
+
+* If the import fails or you see Luxembourg tiles, double-check the filename and path.
 
 ```bash
 mv ~/osm-docker/australia-latest.osm.pbf ~/osm-docker/region.osm.pbf
 ls -lh ~/osm-docker
 ```
 
-- Proper renaming prevents import failures caused by filename/path mismatches.
+* Double-check: no extra dots, spaces, or typos. This ensures Docker picks up the correct `.osm.pbf` file.
 
 ---
 
 ## 5. Import OSM Data (One-Time)
+
+**NOTE:** Make sure the filename fix above is completed before running the import.
 
 Import the data into PostgreSQL (may take hours for large regions):
 
@@ -69,7 +74,7 @@ sudo docker run -v ~/osm-docker/osm-data:/data \
   overv/openstreetmap-tile-server:latest import
 ```
 
-- On successful completion, you’ll see:  
+* On successful completion, you’ll see:
   `~/osm-docker/osm-data/database/planet-import-complete`
 
 **If the import fails** (e.g., crash, I/O error, VM shutdown), reset the database and retry:
@@ -88,8 +93,8 @@ Once import is complete, start the tile server:
 sudo docker run -p 8080:80 -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest run
 ```
 
-- Demo page: `http://<your-server-ip>:8080`
-- Example tile: `http://<your-server-ip>:8080/tile/0/0/0.png`
+* Demo page: `http://<your-server-ip>:8080`
+* Example tile: `http://<your-server-ip>:8080/tile/0/0/0.png`
 
 ---
 
@@ -105,8 +110,8 @@ The `overv/openstreetmap-tile-server` Docker image supports applying updates usi
 sudo docker run -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest update
 ```
 
-- This command downloads and applies the latest minutely, hourly, or daily diffs from OpenStreetMap.
-- It is recommended to run this as a scheduled cron job for continuous updates (e.g., daily or hourly).
+* This command downloads and applies the latest minutely, hourly, or daily diffs from OpenStreetMap.
+* It is recommended to run this as a scheduled cron job for continuous updates (e.g., daily or hourly).
 
 ### 7.2. Scheduling Automatic Updates
 
@@ -116,7 +121,7 @@ To automate updates, add a cron job. For example, to update hourly:
 0 * * * * docker run -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest update
 ```
 
-- Add this line to your crontab via `crontab -e`.
+* Add this line to your crontab via `crontab -e`.
 
 ### 7.3. Manual Full Import
 
@@ -126,25 +131,25 @@ If your region changes significantly or you want to update all data, repeat the 
 
 ## 8. Common Issues & Solutions
 
-- **Filename mismatch:** Always rename to `region.osm.pbf` before import.
-- **Blank map tiles:** Import incomplete—verify `planet-import-complete` in `osm-data/database/`.
-- **Port conflicts:** Check with `sudo lsof -i :8080`.
-- **Slow initial load:** First render is slow; tiles are cached thereafter.
+* **Wrong filename:** Must be `region.osm.pbf`. Skipping this will import Luxembourg by default.
+* **Blank map tiles:** Import incomplete—verify `planet-import-complete` in `osm-data/database/`.
+* **Port conflicts:** Check with `sudo lsof -i :8080`.
+* **Slow initial load:** First render is slow; tiles are cached thereafter.
 
 ---
 
 ## 9. Additional Notes & Recommendations
 
-- **File naming is critical:** The tile server expects a specific filename for successful import.
-- **Permissions:** Add your user to the Docker group to avoid requiring `sudo`:
+* **File naming is critical:** The tile server expects a specific filename for successful import.
+* **Permissions:** Add your user to the Docker group to avoid requiring `sudo`:
 
-  ```bash
-  sudo usermod -aG docker $USER
-  newgrp docker
-  ```
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
 
-- **Performance:** VM import performance is suitable for testing; expect longer times for large regions.
-- **Validation:** After setup, the demo page and tile rendering should work as expected.
+* **Performance:** VM import performance is suitable for testing; expect longer times for large regions.
+* **Validation:** After setup, the demo page and tile rendering should work as expected.
 
 ---
 
@@ -152,9 +157,9 @@ If your region changes significantly or you want to update all data, repeat the 
 
 For a production deployment, consider:
 
-- **External access:** Configure firewall rules and open necessary ports.
-- **Reverse proxy:** Utilize Nginx or Caddy for HTTPS and load balancing.
-- **Data persistence & backups:** Regularly back up your PostgreSQL data directory.
+* **External access:** Configure firewall rules and open necessary ports.
+* **Reverse proxy:** Utilize Nginx or Caddy for HTTPS and load balancing.
+* **Data persistence & backups:** Regularly back up your PostgreSQL data directory.
 
 ---
 
@@ -162,21 +167,22 @@ For a production deployment, consider:
 
 If you are running your own OSM tile server, you are not subject to OSM Foundation restrictions. However, if you use tiles from the official OSM servers, you **must** comply with their [Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/):
 
-- **Do not use OSM’s public tile servers for high-volume production, commercial, or automated use.**
-- **Heavy usage is not permitted:** OSM servers are funded by donations and have limited capacity.
-- **Bulk download, scraping, or tile mirroring is prohibited.**
-- **Caching:** If you use OSM tiles outside your own infrastructure, use local caching to reduce load.
-- **Attribution:** Maps must visibly credit “© OpenStreetMap contributors”. See [Attribution Guidelines](https://www.openstreetmap.org/copyright).
+* **Do not use OSM’s public tile servers for high-volume production, commercial, or automated use.**
+* **Heavy usage is not permitted:** OSM servers are funded by donations and have limited capacity.
+* **Bulk download, scraping, or tile mirroring is prohibited.**
+* **Caching:** If you use OSM tiles outside your own infrastructure, use local caching to reduce load.
+* **Attribution:** Maps must visibly credit “© OpenStreetMap contributors”. See [Attribution Guidelines](https://www.openstreetmap.org/copyright).
 
 > **Recommendation:** For any significant or production use, deploy your own tile server (as described in this guide) or use a commercial tile provider.
 
 ---
 
 **References:**
-- [OpenStreetMap Tile Server Docker Image](https://github.com/Overv/openstreetmap-tile-server)
-- [Geofabrik OSM Data Downloads](https://download.geofabrik.de/)
-- [Docker Documentation](https://docs.docker.com/)
-- [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/)
+
+* [OpenStreetMap Tile Server Docker Image](https://github.com/Overv/openstreetmap-tile-server)
+* [Geofabrik OSM Data Downloads](https://download.geofabrik.de/)
+* [Docker Documentation](https://docs.docker.com/)
+* [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/)
 
 ---
 
