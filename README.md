@@ -44,8 +44,8 @@ This repository offers a step-by-step guide for deploying your own OpenStreetMap
 ## Support & Contributions
 
 - **Need help or have a request?** Open an issue on GitHub.
-- **Want to contribute?** Submit a pull request or contact the maintainers.
+- **Want to contribute?** Submit a pull request or contact OSM-AtlasCoder
 
 ---
 
-Empowering you to build robust, self-hosted map infrastructure—one tile at a time.
+
