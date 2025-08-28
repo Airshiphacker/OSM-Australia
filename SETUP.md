@@ -113,28 +113,37 @@ sudo docker run -p 8080:80 -v ~/osm-docker/osm-data:/data overv/openstreetmap-ti
 
 ## 7. Keeping the Map Updated
 
-To keep your tile server’s map data up-to-date with the latest OSM changes, you should regularly apply updates (diffs) to your database. This process is called **replication**.
+The tile server can be kept up-to-date using OSM diffs. You can either update manually or automate the process.
 
-### 7.1. Using the Docker Image for Updates
+### 7.1. Manual Updates (Recommended)
 
-The `overv/openstreetmap-tile-server` Docker image supports applying updates using the `update` command. To fetch and apply the latest changes:
+Run the following command whenever you want to refresh your map data:
 
 ```bash
 sudo docker run -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest update
 ```
 
-* This command downloads and applies the latest minutely, hourly, or daily diffs from OpenStreetMap.
-* It is recommended to run this as a scheduled cron job for continuous updates (e.g., daily or hourly).
+**What this does:**
 
-### 7.2. Scheduling Automatic Updates
+1. Contacts the OSM replication servers and checks what changes (diffs) have occurred since your last update.
+2. Downloads only the differences instead of the full `.osm.pbf` file.
+3. Applies these diffs to your PostgreSQL database so that the tile server renders the most current map data.
 
-To automate updates, add a cron job. For example, to update hourly:
+* If there are no changes, the command finishes quickly.
+* If changes exist, they are applied automatically.
+
+This process makes it **fast and efficient**, so for most users, running the update weekly or monthly is sufficient.
+
+### 7.2. Automatic Updates (Optional)
+
+If you want the server to stay continuously up-to-date without manual intervention, you can schedule a cron job. For example, to update hourly:
 
 ```bash
 0 * * * * docker run -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest update
 ```
 
 * Add this line to your crontab via `crontab -e`.
+* This is optional; manual updates using the command above are usually enough for most use cases.
 
 ### 7.3. Manual Full Import
 
