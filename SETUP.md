@@ -32,11 +32,12 @@ newgrp docker
 
 ## 2. Directory Structure
 
-Establish directories for container files and imported OSM data, including the style folder:
+Establish directories for container files, imported OSM data, style, and tiles:
 
 ```bash
 mkdir -p ~/osm-docker/osm-data/style
 mkdir -p ~/osm-docker/osm-data/database
+mkdir -p ~/osm-docker/osm-data/tiles
 cd ~/osm-docker
 ```
 
@@ -139,6 +140,7 @@ If your region changes significantly, repeat the full import process with the la
 * **Wrong filename:** Must be `region.osm.pbf`; otherwise, Luxembourg is imported.
 * **Blank map tiles:** Import incomplete—verify `planet-import-complete` in `osm-data/database/`.
 * **Port conflicts:** Check with `sudo lsof -i :8080`.
+* **Missing /tiles directory issue:** Ensure `~/osm-docker/osm-data/tiles` exists.
 * **Slow initial load:** First render is slow; tiles are cached thereafter.
 
 ---
