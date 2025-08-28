@@ -1,6 +1,6 @@
 # OpenStreetMap Tile Server (Docker, Ubuntu)
 
-This guide provides a walkthrough for deploying an OpenStreetMap (OSM) tile server using Docker on Ubuntu. It has been updated to ensure full dataset imports and proper style handling, validated inside a Linux VM using Australia OSM data.
+This guide provides a walkthrough for deploying an OpenStreetMap (OSM) tile server using Docker on Ubuntu. It has been updated to ensure full dataset imports and proper style handling, validated on a Linux VM using Australia OSM data.
 
 ---
 
