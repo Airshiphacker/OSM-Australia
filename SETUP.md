@@ -209,3 +209,6 @@ If you are running your own OSM tile server, you are not subject to OSM Foundati
 ---
 
 With these steps above, you can deploy a OSM tile server on Ubuntu using Docker, suitable for development, testing, or production environments, and ensure compliance with OSM policies.
+
+** OSM-AtlasCoder **
+
