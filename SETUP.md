@@ -106,7 +106,11 @@ sudo rm -rf ~/osm-docker/osm-data/database/*
 Start the tile server:
 
 ```bash
-docker run -p 8080:80 -v ~/osm-docker/osm-data:/data overv/openstreetmap-tile-server:latest run
+sudo docker run -d --name osm-tiles \
+  -p 8080:80 \
+  -v ~/osm-docker/osm-data:/data/database \
+  overv/openstreetmap-tile-server:latest run
+
 ```
 
 * Demo page: `http://<your-server-ip>:8080`
